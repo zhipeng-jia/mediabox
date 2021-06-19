@@ -505,9 +505,10 @@ download "https://www.ffmpeg.org/releases/ffmpeg-4.4.tar.gz"
   --disable-debug \
   --disable-doc \
   --disable-shared \
+  --disable-ffplay \
+  --disable-ffprobe \
   --enable-pthreads \
   --enable-static \
-  --enable-small \
   --enable-version3 \
   --extra-cflags="${CFLAGS}" \
   --extra-ldexeflags="${LDEXEFLAGS}" \
