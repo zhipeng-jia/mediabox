@@ -8,6 +8,7 @@ VERSION=1.26
 CWD=$(pwd)
 PACKAGES="$CWD/packages"
 WORKSPACE="$CWD/workspace"
+OUTDIR="$CWD/out"
 CFLAGS="-I$WORKSPACE/include -march=native"
 LDFLAGS="-L$WORKSPACE/lib"
 LDEXEFLAGS=""
@@ -254,9 +255,11 @@ fi
 
 mkdir -p "$PACKAGES"
 mkdir -p "$WORKSPACE"
+mkdir -p "$OUTDIR"
 
 export PATH="${WORKSPACE}/bin:$PATH"
-PKG_CONFIG_PATH="${WORKSPACE}/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
+PKG_CONFIG_PATH="${OUTDIR}/lib/pkgconfig:${WORKSPACE}/lib/pkgconfig"
+PKG_CONFIG_PATH+=":/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
 PKG_CONFIG_PATH+=":/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib64/pkgconfig"
 export PKG_CONFIG_PATH
 
@@ -301,8 +304,9 @@ if $NONFREE_AND_GPL; then
     download "https://github.com/videolan/x265/archive/Release_3.5.tar.gz" "x265-3.5.tar.gz"
     cd build/linux || exit
 
-    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DNATIVE_BUILD=ON -DHIGH_BIT_DEPTH=ON \
-	    -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF ../../source
+    execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" \
+      -DNATIVE_BUILD=ON -DHIGH_BIT_DEPTH=ON -DENABLE_LIBNUMA=OFF \
+	    -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF -DCMAKE_POSITION_INDEPENDENT_CODE=ON ../../source
     execute make -j $MJOBS
     execute make install
 
@@ -324,7 +328,13 @@ if build "libvpx"; then
     sed "s/-Wl,--no-undefined -Wl,-soname/-Wl,-undefined,error -Wl,-install_name/g" build/make/Makefile.patched >build/make/Makefile
   fi
 
-  execute ./configure --prefix="${WORKSPACE}" --disable-unit-tests --disable-shared --as=yasm --enable-vp9-highbitdepth
+  execute ./configure \
+    --prefix="${WORKSPACE}" \
+    --disable-unit-tests \
+    --disable-shared \
+    --enable-pic \
+    --as=yasm \
+    --enable-vp9-highbitdepth
   execute make -j $MJOBS
   execute make install
 
@@ -336,7 +346,7 @@ if $NONFREE_AND_GPL; then
   if build "xvidcore"; then
     download "https://downloads.xvid.com/downloads/xvidcore-1.3.7.tar.gz"
     cd build/generic || exit
-    execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+    execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --enable-pic
     execute make -j $MJOBS
     execute make install
 
@@ -353,31 +363,13 @@ if $NONFREE_AND_GPL; then
   CONFIGURE_OPTIONS+=("--enable-libxvid")
 fi
 
-if $NONFREE_AND_GPL; then
-  if build "vid_stab"; then
-    download "https://github.com/georgmartius/vid.stab/archive/v1.1.0.tar.gz" "vid.stab-1.1.0.tar.gz"
-
-    if $MACOS_M1; then
-      curl -s -o "$PACKAGES/vid.stab-1.1.0/fix_cmake_quoting.patch" https://raw.githubusercontent.com/Homebrew/formula-patches/5bf1a0e0cfe666ee410305cece9c9c755641bfdf/libvidstab/fix_cmake_quoting.patch
-      patch -p1 <fix_cmake_quoting.patch
-    fi
-
-    execute cmake -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DUSE_OMP=OFF -DENABLE_SHARED=off .
-    execute make
-    execute make install
-
-    build_done "vid_stab"
-  fi
-  CONFIGURE_OPTIONS+=("--enable-libvidstab")
-fi
-
 ##
 ## audio library
 ##
 
 if build "lame"; then
   download "https://netcologne.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-pic
   execute make -j $MJOBS
   execute make install
 
@@ -387,7 +379,7 @@ CONFIGURE_OPTIONS+=("--enable-libmp3lame")
 
 if build "opus"; then
   download "https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-pic
   execute make -j $MJOBS
   execute make install
 
@@ -397,7 +389,7 @@ CONFIGURE_OPTIONS+=("--enable-libopus")
 
 if build "libogg"; then
   download "https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-1.3.3.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-pic
   execute make -j $MJOBS
   execute make install
   build_done "libogg"
@@ -405,7 +397,14 @@ fi
 
 if build "libvorbis"; then
   download "https://ftp.osuosl.org/pub/xiph/releases/vorbis/libvorbis-1.3.6.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --with-ogg-libraries="${WORKSPACE}"/lib --with-ogg-includes="${WORKSPACE}"/include/ --enable-static --disable-shared --disable-oggtest
+  execute ./configure \
+    --prefix="${WORKSPACE}" \
+    --with-ogg-libraries="${WORKSPACE}"/lib \
+    --with-ogg-includes="${WORKSPACE}"/include/ \
+    --enable-static \
+    --with-pic \
+    --disable-shared \
+    --disable-oggtest
   execute make -j $MJOBS
   execute make install
 
@@ -418,7 +417,20 @@ if build "libtheora"; then
   sed "s/-fforce-addr//g" configure >configure.patched
   chmod +x configure.patched
   mv configure.patched configure
-  execute ./configure --prefix="${WORKSPACE}" --with-ogg-libraries="${WORKSPACE}"/lib --with-ogg-includes="${WORKSPACE}"/include/ --with-vorbis-libraries="${WORKSPACE}"/lib --with-vorbis-includes="${WORKSPACE}"/include/ --enable-static --disable-shared --disable-oggtest --disable-vorbistest --disable-examples --disable-asm --disable-spec
+  execute ./configure \
+    --prefix="${WORKSPACE}" \
+    --with-ogg-libraries="${WORKSPACE}"/lib \
+    --with-ogg-includes="${WORKSPACE}"/include/ \
+    --with-vorbis-libraries="${WORKSPACE}"/lib \
+    --with-vorbis-includes="${WORKSPACE}"/include/ \
+    --enable-static \
+    --with-pic \
+    --disable-shared \
+    --disable-oggtest \
+    --disable-vorbistest \
+    --disable-examples \
+    --disable-asm \
+    --disable-spec
   execute make -j $MJOBS
   execute make install
 
@@ -429,7 +441,7 @@ CONFIGURE_OPTIONS+=("--enable-libtheora")
 if $NONFREE_AND_GPL; then
   if build "fdk_aac"; then
     download "https://sourceforge.net/projects/opencore-amr/files/fdk-aac/fdk-aac-2.0.2.tar.gz/download?use_mirror=gigenet" "fdk-aac-2.0.2.tar.gz"
-    execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --enable-pic
+    execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-pic
     execute make -j $MJOBS
     execute make install
 
@@ -446,7 +458,11 @@ if build "libwebp"; then
   download "https://github.com/webmproject/libwebp/archive/v1.2.0.tar.gz" "libwebp-1.2.0.tar.gz"
   make_dir build
   cd build || exit
-  execute cmake -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -DENABLE_SHARED=OFF -DENABLE_STATIC=ON ../
+  execute cmake \
+    -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" \
+    -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include \
+    -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+    ../
   execute make -j $MJOBS
   execute make install
 
@@ -458,19 +474,10 @@ CONFIGURE_OPTIONS+=("--enable-libwebp")
 ## other library
 ##
 
-if build "libsdl"; then
-  download "https://www.libsdl.org/release/SDL2-2.0.14.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
-  execute make -j $MJOBS
-  execute make install
-
-  build_done "libsdl"
-fi
-
 if build "libass"; then
 	download "https://github.com/libass/libass/releases/download/0.15.1/libass-0.15.1.tar.gz"
 
-	execute ./configure --prefix="${WORKSPACE}" --enable-shared=no --enable-pic CFLAGS="-O3"
+	execute ./configure --prefix="${WORKSPACE}" --enable-shared=no --with-pic CFLAGS="-O3"
 
 	execute make -j $MJOBS
 	execute make install
@@ -482,7 +489,10 @@ CONFIGURE_OPTIONS+=("--enable-libass")
 if $NONFREE_AND_GPL; then
   if build "srt"; then
     download "https://github.com/Haivision/srt/archive/v1.4.3.tar.gz" "srt-1.4.3.tar.gz"
-    execute cmake . -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DENABLE_APPS=OFF -DUSE_STATIC_LIBSTDCXX=ON
+    execute cmake . -DCMAKE_INSTALL_PREFIX="${WORKSPACE}" \
+      -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_INSTALL_BINDIR=bin -DCMAKE_INSTALL_INCLUDEDIR=include \
+      -DENABLE_SHARED=OFF -DENABLE_STATIC=ON -DENABLE_APPS=OFF -DENABLE_ENCRYPTION=OFF \
+      -DUSE_STATIC_LIBSTDCXX=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON
     execute make install
 
     if [ -n "$LDEXEFLAGS" ]; then
@@ -494,33 +504,69 @@ if $NONFREE_AND_GPL; then
   CONFIGURE_OPTIONS+=("--enable-libsrt")
 fi
 
+if build "zimg"; then
+  download "https://github.com/sekrit-twc/zimg/archive/refs/tags/release-3.0.1.tar.gz" "zimg-3.0.1.tar.gz"
+
+  execute ./autogen.sh
+  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static --with-pic
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "zimg"
+fi
+CONFIGURE_OPTIONS+=("--enable-libzimg")
+
 ##
 ## FFmpeg
 ##
 
-build "ffmpeg"
-download "https://www.ffmpeg.org/releases/ffmpeg-4.4.tar.gz"
-# shellcheck disable=SC2086
-./configure "${CONFIGURE_OPTIONS[@]}" \
-  --disable-debug \
-  --disable-doc \
-  --disable-shared \
-  --disable-ffplay \
-  --disable-ffprobe \
-  --enable-pthreads \
-  --enable-static \
-  --enable-version3 \
-  --extra-cflags="${CFLAGS}" \
-  --extra-ldexeflags="${LDEXEFLAGS}" \
-  --extra-ldflags="${LDFLAGS}" \
-  --extra-libs="${EXTRALIBS}" \
-  --extra-version="${EXTRAVERSION}" \
-  --pkgconfigdir="$WORKSPACE/lib/pkgconfig" \
-  --pkg-config-flags="--static" \
-  --prefix="${WORKSPACE}"
+if build "ffmpeg"; then
+  download "https://www.ffmpeg.org/releases/ffmpeg-4.4.tar.gz"
+  # shellcheck disable=SC2086
+  execute ./configure "${CONFIGURE_OPTIONS[@]}" \
+    --disable-debug \
+    --disable-doc \
+    --disable-static \
+    --disable-ffplay \
+    --disable-ffprobe \
+    --disable-network \
+    --disable-alsa \
+    --disable-sdl2 \
+    --disable-bzlib \
+    --disable-xlib \
+    --disable-lzma \
+    --enable-pthreads \
+    --enable-shared \
+    --enable-pic \
+    --enable-version3 \
+    --extra-cflags="${CFLAGS}" \
+    --extra-ldexeflags="${LDEXEFLAGS}" \
+    --extra-ldflags="${LDFLAGS}" \
+    --extra-libs="${EXTRALIBS}" \
+    --extra-version="${EXTRAVERSION}" \
+    --pkgconfigdir="$WORKSPACE/lib/pkgconfig" \
+    --pkg-config-flags="--static" \
+    --prefix="${OUTDIR}"
 
-execute make -j $MJOBS
-execute make install
+  execute make -j $MJOBS
+  execute make install
 
+  build_done "ffmpeg"
+fi
+
+##
+## VapourSynth
+##
+
+if build "vapoursynth"; then
+  download "https://github.com/vapoursynth/vapoursynth/archive/refs/tags/R53.tar.gz" "vapoursynth-R53.tar.gz"
+
+  execute ./autogen.sh
+  execute ./configure --prefix="${OUTDIR}" --disable-static --enable-shared --enable-subtext
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "vapoursynth"
+fi
 
 exit 0
