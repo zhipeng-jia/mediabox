@@ -8,7 +8,7 @@ VERSION=1.26
 CWD=$(pwd)
 PACKAGES="$CWD/packages"
 WORKSPACE="$CWD/workspace"
-CFLAGS="-I$WORKSPACE/include"
+CFLAGS="-I$WORKSPACE/include -march=native"
 LDFLAGS="-L$WORKSPACE/lib"
 LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz"
@@ -281,7 +281,7 @@ if $NONFREE_AND_GPL; then
     cd "${PACKAGES}"/x264-b684eb || exit
 
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
-      execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic CXXFLAGS="-fPIC"
+      execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic CXXFLAGS="-fPIC" CFLAGS="-march=native"
     else
       execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic
     fi
