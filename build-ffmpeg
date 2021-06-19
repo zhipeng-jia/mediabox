@@ -281,8 +281,8 @@ fi
 if $NONFREE_AND_GPL; then
 
   if build "x264"; then
-    download "https://code.videolan.org/videolan/x264/-/archive/5db6aa6cab1b146e07b60cc1736a01f21da01154/x264-5db6aa6cab1b146e07b60cc1736a01f21da01154.tar.gz" "x264-b684eb.tar.gz"
-    cd "${PACKAGES}"/x264-b684eb || exit
+    download "https://code.videolan.org/videolan/x264/-/archive/5db6aa6cab1b146e07b60cc1736a01f21da01154/x264-5db6aa6cab1b146e07b60cc1736a01f21da01154.tar.gz" "x264-a01154.tar.gz"
+    cd "${PACKAGES}"/x264-a01154 || exit
 
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
       execute ./configure --prefix="${WORKSPACE}" --enable-static --enable-pic CXXFLAGS="-fPIC" CFLAGS="-march=native"
@@ -516,6 +516,16 @@ if build "zimg"; then
 fi
 CONFIGURE_OPTIONS+=("--enable-libzimg")
 
+if build "l-smash"; then
+  download "https://github.com/l-smash/l-smash/archive/refs/tags/v2.14.5.tar.gz" "l-smash-v2.14.5.tar.gz"
+
+  execute ./configure --prefix="${WORKSPACE}"
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "l-smash"
+fi
+
 ##
 ## FFmpeg
 ##
@@ -567,6 +577,33 @@ if build "vapoursynth"; then
   execute make install
 
   build_done "vapoursynth"
+fi
+
+##
+## x265-Yuuki
+##
+
+if build "x265-Yuuki"; then
+  execute git clone https://github.com/msg7086/x265-Yuuki-Asuna ${PACKAGES}/x265-Yuuki-Asuna
+  cd ${PACKAGES}/x265-Yuuki-Asuna || exit
+
+  execute git checkout Yuuki
+  cd build/linux || exit
+
+  execute cmake -DCMAKE_INSTALL_PREFIX="${OUTDIR}" \
+    -DCMAKE_PREFIX_PATH="${OUTDIR}:${WORKSPACE}" \
+    -DCMAKE_CXX_FLAGS="-I ${OUTDIR}/include -I ${WORKSPACE}/include" \
+    -DNATIVE_BUILD=ON -DHIGH_BIT_DEPTH=ON -DENABLE_LIBNUMA=OFF \
+    -DENABLE_SHARED=off -DBUILD_SHARED_LIBS=OFF \
+    -DENABLE_AVISYNTH=OFF -DENABLE_CLI=ON -DENABLE_HDR10_PLUS=ON \
+    -DENABLE_ZIMG=ON -DENABLE_LAVF=ON -DENABLE_MKV=ON -DENABLE_LSMASH=ON \
+    -DENABLE_VPYSYNTH=ON -DVS_INCLUDE_DIR="${OUTDIR}/include" \
+    ../../source
+
+  execute make -j $MJOBS
+  execute make install
+
+  build_done "x265-Yuuki"
 fi
 
 exit 0

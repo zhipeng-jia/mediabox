@@ -19,7 +19,8 @@ RUN apt -y install \
     nasm \
     yasm \
     python3 \
-    cython3
+    cython3 \
+    git
 
 # Install deps
 RUN apt -y install \
@@ -31,7 +32,7 @@ RUN apt -y install \
 
 RUN apt -y clean
 
-RUN mkdir /builddir
+RUN mkdir /builddir && chmod 0777 /builddir
 
 COPY ./build-ffmpeg /usr/local/bin
 
