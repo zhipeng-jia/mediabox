@@ -278,7 +278,7 @@ fi
 if $NONFREE_AND_GPL; then
 
   if build "x264"; then
-    download "https://code.videolan.org/videolan/x264/-/archive/b684ebe04a6f80f8207a57940a1fa00e25274f81/x264-b684ebe04a6f80f8207a57940a1fa00e25274f81.tar.gz" "x264-b684eb.tar.gz"
+    download "https://code.videolan.org/videolan/x264/-/archive/5db6aa6cab1b146e07b60cc1736a01f21da01154/x264-5db6aa6cab1b146e07b60cc1736a01f21da01154.tar.gz" "x264-b684eb.tar.gz"
     cd "${PACKAGES}"/x264-b684eb || exit
 
     if [[ "$OSTYPE" == "linux-gnu" ]]; then
