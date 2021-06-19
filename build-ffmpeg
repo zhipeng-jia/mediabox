@@ -659,42 +659,6 @@ if $NONFREE_AND_GPL; then
 fi
 
 ##
-## HWaccel library
-##
-
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
-  if command_exists "nvcc"; then
-    if build "nv-codec"; then
-      download "https://github.com/FFmpeg/nv-codec-headers/releases/download/n11.0.10.1/nv-codec-headers-11.0.10.1.tar.gz"
-      execute make PREFIX="${WORKSPACE}"
-      execute make install PREFIX="${WORKSPACE}"
-      build_done "nv-codec"
-    fi
-    CFLAGS+=" -I/usr/local/cuda/include"
-    LDFLAGS+=" -L/usr/local/cuda/lib64"
-    CONFIGURE_OPTIONS+=("--enable-cuda-nvcc" "--enable-cuvid" "--enable-nvenc" "--enable-cuda-llvm")
-
-    if [ -z "$LDEXEFLAGS" ]; then
-      CONFIGURE_OPTIONS+=("--enable-libnpp") # Only libnpp cannot be statically linked.
-    fi
-
-    # https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
-    CONFIGURE_OPTIONS+=("--nvccflags=-gencode arch=compute_52,code=sm_52")
-  fi
-
-  # Vaapi doesn't work well with static links FFmpeg.
-  if [ -z "$LDEXEFLAGS" ]; then
-    # If the libva development SDK is installed, enable vaapi.
-    if library_exists "libva"; then
-      if build "vaapi"; then
-        build_done "vaapi"
-      fi
-      CONFIGURE_OPTIONS+=("--enable-vaapi")
-    fi
-  fi
-fi
-
-##
 ## FFmpeg
 ##
 
