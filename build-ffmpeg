@@ -466,6 +466,18 @@ if build "libsdl"; then
   build_done "libsdl"
 fi
 
+if build "libass"; then
+	download "https://github.com/libass/libass/releases/download/0.15.1/libass-0.15.1.tar.gz"
+
+	execute ./configure --prefix="${WORKSPACE}" --enable-shared=no --enable-pic CFLAGS="-O3"
+
+	execute make -j $MJOBS
+	execute make install
+
+	build_done "libass"
+fi
+CONFIGURE_OPTIONS+=("--enable-libass")
+
 if $NONFREE_AND_GPL; then
   if build "srt"; then
     download "https://github.com/Haivision/srt/archive/v1.4.3.tar.gz" "srt-1.4.3.tar.gz"
