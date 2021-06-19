@@ -14,7 +14,7 @@ LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz"
 MACOS_M1=false
 CONFIGURE_OPTIONS=()
-NONFREE_AND_GPL=false
+NONFREE_AND_GPL=true
 
 # Check for Apple Silicon
 if [[ ("$(uname -m)" == "arm64") && ("$OSTYPE" == "darwin"*) ]]; then
@@ -187,7 +187,6 @@ usage() {
   echo "  -h, --help                     Display usage information"
   echo "      --version                  Display version information"
   echo "  -b, --build                    Starts the build process"
-  echo "      --enable-gpl-and-non-free  Enable GPL and non-free codecs  - https://ffmpeg.org/legal.html"
   echo "  -c, --cleanup                  Remove all working dirs"
   echo "      --full-static              Build a full static FFmpeg binary (eg. glibc, pthreads etc...) **only Linux**"
   echo "                                 Note: Because of the NSS (Name Service Switch), glibc does not recommend static links."
@@ -211,11 +210,6 @@ while (($# > 0)); do
   -*)
     if [[ "$1" == "--build" || "$1" =~ '-b' ]]; then
       bflag='-b'
-    fi
-    if [[ "$1" == "--enable-gpl-and-non-free" ]]; then
-      CONFIGURE_OPTIONS+=("--enable-nonfree")
-      CONFIGURE_OPTIONS+=("--enable-gpl")
-      NONFREE_AND_GPL=true
     fi
     if [[ "$1" == "--cleanup" || "$1" =~ '-c' && ! "$1" =~ '--' ]]; then
       cflag='-c'
@@ -249,6 +243,8 @@ echo "Using $MJOBS make jobs simultaneously."
 
 if $NONFREE_AND_GPL; then
 echo "With GPL and non-free codecs"
+CONFIGURE_OPTIONS+=("--enable-nonfree")
+CONFIGURE_OPTIONS+=("--enable-gpl")
 fi
 
 if [ -n "$LDEXEFLAGS" ]; then
