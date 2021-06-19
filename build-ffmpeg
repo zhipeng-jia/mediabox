@@ -12,6 +12,7 @@ CFLAGS="-I$WORKSPACE/include -march=native"
 LDFLAGS="-L$WORKSPACE/lib"
 LDEXEFLAGS=""
 EXTRALIBS="-ldl -lpthread -lm -lz"
+EXTRAVERSION="zjiabuild"
 MACOS_M1=false
 CONFIGURE_OPTIONS=()
 NONFREE_AND_GPL=true
@@ -255,7 +256,7 @@ mkdir -p "$PACKAGES"
 mkdir -p "$WORKSPACE"
 
 export PATH="${WORKSPACE}/bin:$PATH"
-PKG_CONFIG_PATH="/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
+PKG_CONFIG_PATH="${WORKSPACE}/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig"
 PKG_CONFIG_PATH+=":/usr/local/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib64/pkgconfig"
 export PKG_CONFIG_PATH
 
@@ -515,6 +516,7 @@ download "https://www.ffmpeg.org/releases/ffmpeg-4.4.tar.gz"
   --extra-ldexeflags="${LDEXEFLAGS}" \
   --extra-ldflags="${LDFLAGS}" \
   --extra-libs="${EXTRALIBS}" \
+  --extra-version="${EXTRAVERSION}" \
   --pkgconfigdir="$WORKSPACE/lib/pkgconfig" \
   --pkg-config-flags="--static" \
   --prefix="${WORKSPACE}"
