@@ -377,16 +377,6 @@ fi
 ## audio library
 ##
 
-if build "opencore"; then
-  download "https://deac-riga.dl.sourceforge.net/project/opencore-amr/opencore-amr/opencore-amr-0.1.5.tar.gz"
-  execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
-  execute make -j $MJOBS
-  execute make install
-
-  build_done "opencore"
-fi
-CONFIGURE_OPTIONS+=("--enable-libopencore_amrnb" "--enable-libopencore_amrwb")
-
 if build "lame"; then
   download "https://netcologne.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz"
   execute ./configure --prefix="${WORKSPACE}" --disable-shared --enable-static
